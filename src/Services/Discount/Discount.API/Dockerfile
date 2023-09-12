@@ -6,6 +6,7 @@ EXPOSE 80
 
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
+
 COPY ["Services/Discount/Discount.API/Discount.API.csproj", "Services/Discount/Discount.API/"]
 RUN dotnet restore "Services/Discount/Discount.API/Discount.API.csproj"
 COPY . .
@@ -18,4 +19,5 @@ RUN dotnet publish "Discount.API.csproj" -c Release -o /app/publish /p:UseAppHos
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+COPY ["Services/Discount/Discount.API/Data/Coupon.sql", "/app/Data/"]
 ENTRYPOINT ["dotnet", "Discount.API.dll"]
