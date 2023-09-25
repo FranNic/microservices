@@ -37,13 +37,17 @@ services:
     orderdb:
         container_name: orderdb
         environment:
-            SA_PASSWORD: "sa"
+            SA_PASSWORD: "Password12!@"
             ACCEPT_EULA: "Y"
         restart: always
         ports:
             - "1433:1433"
-
-
+    rabbitmq:
+        container_name: rabbitmq
+        restart: always
+        ports:
+            - "5672:5672"
+            - "15672:15672"
 
     catalog.api:
         container_name: catalog.api
@@ -59,22 +63,24 @@ services:
         container_name: basket.api
         environment:
           - ASPNETCORE_ENVIRONMENT=Development
-          - "CacheSettings:ConnectionString=redis://basketdb:6379"
+          - "CacheSettings:ConnectionString=basketdb:6379"
           - "GrpcSettings:DiscountUrl=http://discount.grpc"
+          - "EventBusSettings:HostAddress=amqp://guest:guest@rabbitmq:5672"
         depends_on:
           - basketdb
+          - rabbitmq
         ports:
           - "8001:80"
 
-    # discount.api:
-    #     container_name: discount.api
-    #     environment:
-    #       - ASPNETCORE_ENVIRONMENT=Development
-    #       - "DatabaseSettings:ConnectionString=Host=discountdb;Port=5432;Username=postgres;Password=admin123;Database=DiscountDb"
-    #     depends_on:
-    #       - discountdb
-    #     ports:
-    #       - "8002:80"
+    discount.api:
+        container_name: discount.api
+        environment:
+          - ASPNETCORE_ENVIRONMENT=Development
+          - "DatabaseSettings:ConnectionString=Host=discountdb;Port=5432;Username=postgres;Password=admin123;Database=DiscountDb"
+        depends_on:
+          - discountdb
+        ports:
+          - "8002:80"
 
     discount.grpc:
         container_name: discount.grpc
@@ -84,15 +90,26 @@ services:
         depends_on:
           - discountdb
         ports:
-          - "8002:80"
+          - "8003:80"
     ordering.api:
         container_name: ordering.api
         environment:
-          - ASPNETCORE_ENVIRONMENT=Development
-          - "ConnectionStrings:OrderingConnectionString=Server=orderdb;Database=OrderDb;User Id=sa;Password=sa"  
-          # - "EventBusSettings:HostAddress=amqp://guest:guest@rabbitmq:5672"
+            - ASPNETCORE_ENVIRONMENT=Development
+            - "ConnectionStrings:OrderingConnectionString=Server=orderdb;Database=OrderDb;User Id=sa;Password=Password12!@;TrustServerCertificate=True;"
+            - "EventBusSettings:HostAddress=amqp://guest:guest@rabbitmq:5672"
         depends_on:
             - orderdb
-            # - rabbitmq
+            - rabbitmq
         ports:
             - "8004:80"
+    ocelotapigw:
+        container_name: ocelotapigw
+        environment:
+          - ASPNETCORE_ENVIRONMENT=Development
+        depends_on:
+            - catalog.api
+            - basket.api
+            - discount.api
+            - ordering.api
+        ports:
+          - "8010:80"
