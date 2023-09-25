@@ -21,7 +21,7 @@
 				command.ExecuteNonQuery();
 
 				// add command directly from file 
-				command.CommandText = File.ReadAllText("Data/Coupon.sql");
+				command.CommandText = File.ReadAllText("/app/Data/Coupon.sql");
 				command.ExecuteNonQuery();
 			}
 
